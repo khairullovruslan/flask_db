@@ -1,20 +1,11 @@
-from flask import Flask, url_for, request, render_template
-from werkzeug.utils import redirect
+from flask import Flask
 
 from data import db_session
-from data.news import News
 from data.users import User
-from forms.loginform import LoginForm
-from forms.user import RegisterForm
 
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-
-
-
-
-
 
 
 def user_add():
@@ -44,25 +35,22 @@ def user_get():
 
 def news_add():
     db_sess = db_session.create_session()
+    user = User()
+    user.surname = 'Scott'
+    user.name = 'Ridley'
+    user.age = 21
+    user.position = 'captain'
+    user.speciality = 'research engineer'
+    user.address = 'module_1'
+    user.email = 'scott_chief@mars.org'
 
-    news = News(title="Первая новость", content="Привет блог!",
-                user_id=1, is_private=False)
-    user = db_sess.query(User).filter(User.email == "email@email.ru").first()
-    news2 = News(title="Вторая новость", content="Уже вторая запись!",
-                 user=user, is_private=False)
+    db_sess.add(user)
 
-    news3 = News(title="Вторая новость", content="Уже вторая запись!",
-                 user_id=2, is_private=False)
-
-    db_sess.add(news)
-    db_sess.add(news2)
-    db_sess.add(news3)
     db_sess.commit()
 
 
 if __name__ == '__main__':
     db_session.global_init("db/blogs.db")
     # user_add()
-    user_get()
-    # news_add()
-    app.run(port=8080, host='127.0.0.1')
+    news_add()
+#  app.run(port=8080, host='127.0.0.1')

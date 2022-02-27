@@ -8,18 +8,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(SqlAlchemyBase):
     __tablename__ = 'users'
-    """
-    id (Integer, primary_key, autoincrement)
-    surname (String) (фамилия)
-    name (String) (имя)
-    age (Integer) (возраст)
-    position (String) (должность)
-    speciality (String) (профессия)
-    address (String) (адрес)
-    email (String, unique) (электронная почта)
-    hashed_password (String) (хэшированный пароль)
-    modified_date (DateTime) (дата изменения)
-    """
 
     id = sqlalchemy.Column(sqlalchemy.Integer,
                            primary_key=True, autoincrement=True)
