@@ -1,38 +1,35 @@
-from flask import Flask, url_for, request, render_template
+from flask import Flask, url_for, request, render_template, make_response, jsonify
 from werkzeug.utils import redirect
-from flask_login import LoginManager, login_required, logout_user, current_user
-from data import db_session
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from data import db_session, jobs_api
 from data.jobs import Jobs
-from data.news import News
 from data.users import User
 from forms.loginform import LoginForm
 from forms.user import RegisterForm
 
 app = Flask(__name__)
-
-app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-
 login_manager = LoginManager()
 login_manager.init_app(app)
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    db_sess = db_session.create_session()
-    return db_sess.query(User).get(user_id)
+app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 
 
 @app.route('/')
 @app.route('/index')
 def index():
     db_sess = db_session.create_session()
-    jobs = db_sess.query(Jobs).all()
     if current_user.is_authenticated:
-        jobs = db_sess.query(News).filter(
-            (News.user == current_user) | (News.is_private != True))
+        jobs = db_sess.query(Jobs).filter(
+            (Jobs.user == current_user) | (Jobs.is_finished != True))
     else:
-        jobs = db_sess.query(News).filter(News.is_private != True)
+        jobs = db_sess.query(Jobs).filter(Jobs.is_finished != True)
+
     return render_template("index.html", jobs=jobs)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
 
 
 @app.route('/logout')
@@ -78,13 +75,25 @@ def login():
         db_sess = db_session.create_session()
         user = db_sess.query(User).filter(User.email == form.email.data).first()
         if user and user.check_password(form.password.data):
-            return redirect('/success')
+            login_user(user, remember=form.remember_me.data)
+            return redirect("/")
+        return render_template('login.html',
+                               message="Неправильный логин или пароль",
+                               form=form)
     return render_template('login.html', title='Авторизация', form=form)
 
 
 @app.route("/success")
 def success():
     return render_template('success.html')
+
+
+@app.route("/table/<gender>/<int:age>")
+def table(gender, age):
+    params = {'title': 'Цвет каюты',
+              'gender': gender,
+              'age': age}
+    return render_template('table.html', **params)
 
 
 def user_add():
@@ -120,11 +129,11 @@ def user_add():
     db_sess.commit()
 
 
-def user_get():
-    db_sess = db_session.create_session()
-    jobs = db_sess.query(Jobs).all()
-    for job in jobs:
-        print(job.team_leader.surname, job.team_leader.name, job.work_size, job.is_finished)
+# def user_get():
+#     db_sess = db_session.create_session()
+#     jobs = db_sess.query(Jobs).all()
+#     for job in jobs:
+#         print(job.team_leader.surname, job.team_leader.name, job.work_size, job.is_finished)
 
 
 def jobs_add():
@@ -139,9 +148,15 @@ def jobs_add():
     db_sess.commit()
 
 
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({'error': 'Not found'}), 404)
+
+
 if __name__ == '__main__':
     db_session.global_init("db/blogs.db")
     # user_add()
     # user_get()
     # jobs_add()
-    app.run(port=8081, host='127.0.0.1')
+    app.register_blueprint(jobs_api.blueprint)
+    app.run(port=8080, host='127.0.0.1')

@@ -2,12 +2,13 @@ import datetime
 import sqlalchemy
 from flask_login import UserMixin
 from sqlalchemy import orm
+from sqlalchemy_serializer import SerializerMixin
 
 from .db_session import SqlAlchemyBase
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-class User(SqlAlchemyBase, UserMixin):
+class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     __tablename__ = 'users'
 
     id = sqlalchemy.Column(sqlalchemy.Integer,
@@ -34,7 +35,7 @@ class User(SqlAlchemyBase, UserMixin):
     modified_date = sqlalchemy.Column(sqlalchemy.DateTime,
                                       default=datetime.datetime.now)
 
-    jobs = orm.relation("Jobs", back_populates='team_leader')
+    jobs = orm.relation("Jobs", back_populates='user')
 
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)
