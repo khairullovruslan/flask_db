@@ -1,8 +1,9 @@
 from flask import Flask, url_for, request, render_template
 from werkzeug.utils import redirect
-
+from flask_login import LoginManager, login_required, logout_user, current_user
 from data import db_session
 from data.jobs import Jobs
+from data.news import News
 from data.users import User
 from forms.loginform import LoginForm
 from forms.user import RegisterForm
@@ -11,13 +12,34 @@ app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
+
 
 @app.route('/')
 @app.route('/index')
 def index():
     db_sess = db_session.create_session()
     jobs = db_sess.query(Jobs).all()
+    if current_user.is_authenticated:
+        jobs = db_sess.query(News).filter(
+            (News.user == current_user) | (News.is_private != True))
+    else:
+        jobs = db_sess.query(News).filter(News.is_private != True)
     return render_template("index.html", jobs=jobs)
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect("/")
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -54,7 +76,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
-        user = db_sess.query(User).filter(User.email == form.username.data).first()
+        user = db_sess.query(User).filter(User.email == form.email.data).first()
         if user and user.check_password(form.password.data):
             return redirect('/success')
     return render_template('login.html', title='Авторизация', form=form)
