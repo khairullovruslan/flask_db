@@ -3,9 +3,12 @@ from os import abort
 from flask import Flask, url_for, request, render_template, make_response, jsonify
 from werkzeug.utils import redirect
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from data import db_session, jobs_api
+
+from data import db_session
+from data.departments import Department
 from data.jobs import Jobs
 from data.users import User
+from forms.DepartmentsForm import DepartmentForm
 from forms.JobsForm import JobsForm
 from forms.loginform import LoginForm
 from forms.user import RegisterForm
@@ -14,6 +17,15 @@ app = Flask(__name__)
 login_manager = LoginManager()
 login_manager.init_app(app)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
+
+
+@app.route('/departments')
+def departments():
+    db_sess = db_session.create_session()
+    if current_user.is_authenticated:
+        departments1 = db_sess.query(Department).all()
+
+    return render_template("departaments.html", departments=departments1)
 
 
 @app.route('/')
@@ -119,6 +131,25 @@ def add_jobs():
                            form=form)
 
 
+@app.route('/department', methods=['GET', 'POST'])
+@login_required
+def add_department():
+    form = DepartmentForm()
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        department = Department()
+        department.title = form.title.data
+        department.chief = form.chief.data
+        department.members = form.members.data
+        department.email = form.email.data
+        current_user.department.append(department)
+        db_sess.merge(current_user)
+        db_sess.commit()
+        return redirect('/departments')
+    return render_template('department.html', title='Add Department',
+                           form=form)
+
+
 @app.route('/jobs/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_jobs(id):
@@ -157,6 +188,40 @@ def edit_jobs(id):
                            )
 
 
+@app.route('/department/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_department(id):
+    form = DepartmentForm()
+    if request.method == "GET":
+        db_sess = db_session.create_session()
+        departments = db_sess.query(Department).filter((Department.id == id) | (Department.id == 1),
+                                                       Department.user == current_user).first()
+        if departments:
+            form.title.data = departments.title
+            form.chief.data = departments.chief
+            form.members.data = departments.members
+            form.email.data = departments.email
+        else:
+            abort(404)
+    if form.validate_on_submit():
+        db_sess = db_session.create_session()
+        departments = db_sess.query(Department).filter((Department.id == id) | (Department.id == 1),
+                                                       Department.user == current_user).first()
+        if departments:
+            departments.title = form.title.data
+            departments.chief = form.chief.data
+            departments.members = form.members.data
+            departments.email = form.email.data
+            db_sess.commit()
+            return redirect('/departments')
+        else:
+            abort(404)
+    return render_template('department.html',
+                           title='Edit Department',
+                           form=form
+                           )
+
+
 @app.route('/jobs_delete/<int:id>', methods=['GET', 'POST'])
 @login_required
 def jobs_delete(id):
@@ -171,6 +236,20 @@ def jobs_delete(id):
         abort(404)
     return redirect('/')
 
+
+@app.route('/department_delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def department_delete(id):
+    db_sess = db_session.create_session()
+    departments = db_sess.query(Department).filter((Department.id == id) | (Department.id == 1),
+                                                   Department.user == current_user
+                                                   ).first()
+    if departments:
+        db_sess.delete(departments)
+        db_sess.commit()
+    else:
+        abort(404)
+    return redirect('/departments')
 
 
 def user_add():
@@ -220,8 +299,19 @@ def jobs_add():
     job.job = 'aadadada;dhakdakdgakdbak'
     job.work_size = 15
     job.collaborators = '2, 3'
-    job.is_finished =  True
+    job.is_finished = True
     db_sess.add(job)
+    db_sess.commit()
+
+
+def departments_add():
+    db_sess = db_session.create_session()
+    department = Department()
+    department.title = 'Department of geological exploration'
+    department.chief = 1
+    department.members = '3, 4, 5'
+    department.email = 'geo@mars.org'
+    db_sess.add(department)
     db_sess.commit()
 
 
@@ -232,8 +322,7 @@ def not_found(error):
 
 if __name__ == '__main__':
     db_session.global_init("db/blogs.db")
+    # departments_add()
     # user_add()
-    # user_get()
-    jobs_add()
-    app.register_blueprint(jobs_api.blueprint)
+    # jobs_add()
     app.run(port=8080, host='127.0.0.1')
