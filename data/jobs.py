@@ -24,5 +24,7 @@ class Jobs(SqlAlchemyBase, UserMixin):
     is_finished = sqlalchemy.Column(sqlalchemy.BOOLEAN,
                                     nullable=True)
     team_leader_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("users.id"))
+    category_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("categories.id"))
+    category = orm.relation('Category')
 
     user = orm.relation('User')

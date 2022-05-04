@@ -5,6 +5,7 @@ from werkzeug.utils import redirect
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
 from data import db_session
+from data.categories import Category
 from data.departments import Department
 from data.jobs import Jobs
 from data.users import User
@@ -122,6 +123,7 @@ def add_jobs():
         jobs.team_leader_id = form.team_leader_id.data
         jobs.work_size = form.work_size.data
         jobs.collaborators = form.collaborators.data
+        jobs.category_id = form.category.data
         jobs.is_finished = form.is_finished.data
         current_user.jobs.append(jobs)
         db_sess.merge(current_user)
@@ -164,6 +166,7 @@ def edit_jobs(id):
             form.team_leader_id.data = jobs.team_leader_id
             form.work_size.data = jobs.work_size
             form.collaborators.data = jobs.collaborators
+            form.category.data = jobs.category_id
             form.is_finished.data = jobs.is_finished
         else:
             abort(404)
@@ -177,6 +180,7 @@ def edit_jobs(id):
             jobs.team_leader_id = form.team_leader_id.data
             jobs.work_size = form.work_size.data
             jobs.collaborators = form.collaborators.data
+            jobs.category_id = form.category.data
             jobs.is_finished = form.is_finished.data
             db_sess.commit()
             return redirect('/')
@@ -300,6 +304,7 @@ def jobs_add():
     job.work_size = 15
     job.collaborators = '2, 3'
     job.is_finished = True
+    job.category_id = 1
     db_sess.add(job)
     db_sess.commit()
 
@@ -314,6 +319,13 @@ def departments_add():
     db_sess.add(department)
     db_sess.commit()
 
+def category_add():
+    db_sess = db_session.create_session()
+    category = Category()
+    category.danger_activities = 2
+
+    db_sess.add(category)
+    db_sess.commit()
 
 @app.errorhandler(404)
 def not_found(error):
@@ -323,6 +335,7 @@ def not_found(error):
 if __name__ == '__main__':
     db_session.global_init("db/blogs.db")
     # departments_add()
+    # category_add()
     # user_add()
     # jobs_add()
-    app.run(port=8080, host='127.0.0.1')
+    app.run(port=8081, host='127.0.0.1')
